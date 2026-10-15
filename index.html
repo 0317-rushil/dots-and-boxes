@@ -1,0 +1,1000 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0f24">
+<meta name="description" content="Dots and boxes under a night sky. Play a bot, a friend online, or on the same screen.">
+<title>Starlines Dots and Boxes</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Crect width='28' height='28' rx='6' fill='%230a0f24'/%3E%3Cpath d='M6 6H22V22' stroke='%2347e0c8' stroke-width='2.5' fill='none'/%3E%3Cpath d='M6 6V22H22' stroke='%23ff7f96' stroke-width='2.5' fill='none'/%3E%3Cg fill='%23ffe7a8'%3E%3Ccircle cx='6' cy='6' r='2.4'/%3E%3Ccircle cx='22' cy='6' r='2.4'/%3E%3Ccircle cx='6' cy='22' r='2.4'/%3E%3Ccircle cx='22' cy='22' r='2.4'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a night sky. Dots are stars, lines are constellation strokes, captured boxes glow as nebulae. One centered stage per screen. */
+:root {
+  --sky: #0a0f24;
+  --sky-2: #121838;
+  --panel: rgba(22, 29, 66, 0.72);
+  --rule: #2a3366;
+  --ink: #eef0ff;
+  --muted: #9aa2d1;
+  --star: #ffe7a8;
+  --p1: #47e0c8;
+  --p2: #ff7f96;
+  --p1-soft: rgba(71, 224, 200, 0.2);
+  --p2-soft: rgba(255, 127, 150, 0.2);
+  --danger: #ffb36b;
+  --display: "Syne", "Avenir Next", "Segoe UI", sans-serif;
+  --body: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: radial-gradient(1200px 700px at 70% -10%, #1b2260 0%, transparent 60%), radial-gradient(900px 600px at -10% 110%, #2a1840 0%, transparent 60%), var(--sky);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+#stars { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.app {
+  position: relative; z-index: 1;
+  min-height: 100%;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 32px;
+  display: flex; flex-direction: column; align-items: center;
+}
+.screen { width: 100%; max-width: 920px; display: flex; flex-direction: column; gap: 22px; animation: rise .5s ease both; }
+@keyframes rise { from { transform: translateY(10px); opacity: .4 } to { transform: none; opacity: 1 } }
+
+/* ---------- Brand ---------- */
+.brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.logo { font-family: var(--display); font-weight: 800; font-size: 20px; letter-spacing: .02em; display: flex; align-items: center; gap: 10px; }
+.logo svg { width: 28px; height: 28px; }
+.icon-btn { background: transparent; border: 1px solid var(--rule); color: var(--muted); border-radius: 999px; padding: 7px 14px; font: 600 13px var(--body); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.icon-btn:hover { color: var(--ink); border-color: var(--muted); }
+
+/* ---------- Hero ---------- */
+.hero { display: grid; grid-template-columns: 1.15fr 1fr; gap: 28px; align-items: center; }
+.hero h1 { font-family: var(--display); font-weight: 800; font-size: clamp(44px, 8vw, 92px); line-height: .92; margin: 0; letter-spacing: -0.02em; text-wrap: balance; }
+.hero h1 .a { color: var(--p1); }
+.hero h1 .b { color: var(--p2); }
+.hero p { color: var(--muted); max-width: 46ch; margin: 14px 0 0; font-size: 16px; }
+.demo { width: 100%; max-width: 340px; justify-self: center; aspect-ratio: 1; }
+
+/* ---------- Setup panel ---------- */
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 22px; padding: 22px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 22px; }
+.field { display: flex; flex-direction: column; gap: 10px; }
+.label { font: 700 11px var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.mode { text-align: left; background: rgba(255,255,255,0.03); border: 1.5px solid var(--rule); border-radius: 16px; padding: 16px; color: var(--ink); cursor: pointer; display: flex; flex-direction: column; gap: 6px; transition: border-color .2s, transform .2s, background .2s; font-family: var(--body); }
+.mode:hover { transform: translateY(-2px); border-color: var(--muted); }
+.mode[aria-pressed="true"] { border-color: var(--star); background: rgba(255, 231, 168, 0.07); box-shadow: 0 0 0 4px rgba(255,231,168,.08); }
+.mode strong { font: 700 17px var(--display); }
+.mode span { color: var(--muted); font-size: 13px; }
+.mode svg { width: 34px; height: 34px; margin-bottom: 4px; }
+.sizes { display: flex; gap: 10px; flex-wrap: wrap; }
+.size { background: rgba(255,255,255,0.03); border: 1.5px solid var(--rule); border-radius: 14px; padding: 10px 12px 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--ink); min-width: 74px; transition: border-color .2s, transform .2s; }
+.size:hover { transform: translateY(-2px); }
+.size[aria-pressed="true"] { border-color: var(--star); background: rgba(255, 231, 168, 0.07); }
+.size canvas { width: 44px; height: 44px; }
+.size b { font: 700 13px var(--mono); }
+.size small { font-size: 11px; color: var(--muted); margin-top: -4px; }
+.row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.seg { display: inline-flex; background: rgba(255,255,255,0.04); border: 1px solid var(--rule); border-radius: 999px; padding: 4px; gap: 4px; flex-wrap: wrap; }
+.seg button { background: transparent; border: 0; color: var(--muted); border-radius: 999px; padding: 7px 14px; font: 600 13px var(--body); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--star); color: #1a1530; }
+input[type="text"] { background: rgba(0,0,0,0.25); border: 1.5px solid var(--rule); border-radius: 12px; padding: 11px 14px; color: var(--ink); font: 600 15px var(--body); width: 100%; min-width: 0; }
+input[type="text"]:focus { outline: none; border-color: var(--star); }
+.names { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.name-wrap { position: relative; }
+.name-wrap::before { content: ""; position: absolute; left: 13px; top: 50%; width: 10px; height: 10px; border-radius: 50%; transform: translateY(-50%); }
+.name-wrap.p1::before { background: var(--p1); box-shadow: 0 0 10px var(--p1); }
+.name-wrap.p2::before { background: var(--p2); box-shadow: 0 0 10px var(--p2); }
+.name-wrap input { padding-left: 32px; }
+.cta { background: linear-gradient(135deg, var(--star), #ffc98a); color: #1a1530; border: 0; border-radius: 16px; padding: 16px 22px; font: 800 18px var(--display); letter-spacing: .02em; cursor: pointer; transition: transform .15s, box-shadow .2s; box-shadow: 0 8px 30px rgba(255, 210, 140, 0.25); }
+.cta:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(255, 210, 140, 0.35); }
+.cta:active { transform: translateY(0); }
+.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--rule); border-radius: 14px; padding: 12px 18px; font: 700 14px var(--body); cursor: pointer; }
+.ghost:hover { border-color: var(--muted); }
+button:focus-visible, input:focus-visible, .hit:focus-visible { outline: 2px solid var(--star); outline-offset: 2px; }
+.rules { color: var(--muted); font-size: 13.5px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.rules div { display: flex; flex-direction: column; gap: 4px; }
+.rules b { color: var(--ink); font: 700 14px var(--display); }
+
+/* ---------- Online lobby ---------- */
+.lobby { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.join-row { display: flex; gap: 10px; }
+.join-row input { text-transform: uppercase; font-family: var(--mono); letter-spacing: .2em; }
+.tables { display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow: auto; }
+.table-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--rule); border-radius: 12px; background: rgba(255,255,255,0.03); }
+.table-item code { font: 700 14px var(--mono); letter-spacing: .15em; color: var(--star); }
+.table-item span { color: var(--muted); font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.empty { color: var(--muted); font-size: 13px; padding: 10px 0; }
+.note { color: var(--muted); font-size: 13px; }
+.error { color: var(--danger); font-size: 13px; min-height: 1em; }
+
+/* ---------- Game ---------- */
+.hud { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: center; }
+.player { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; border: 1.5px solid var(--rule); background: var(--panel); transition: border-color .3s, box-shadow .3s, transform .3s; min-width: 0; }
+.player.right { flex-direction: row-reverse; text-align: right; }
+.player .orb { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+.player.p1 .orb { background: var(--p1); box-shadow: 0 0 14px var(--p1); }
+.player.p2 .orb { background: var(--p2); box-shadow: 0 0 14px var(--p2); }
+.player .who { min-width: 0; display: flex; flex-direction: column; }
+.player .nm { font: 700 15px var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.player .tag { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.player .score { margin-left: auto; font: 700 34px var(--mono); font-variant-numeric: tabular-nums; line-height: 1; }
+.player.right .score { margin-left: 0; margin-right: auto; }
+.player.p1.active { border-color: var(--p1); box-shadow: 0 0 0 4px var(--p1-soft), 0 0 30px var(--p1-soft); transform: translateY(-2px); }
+.player.p2.active { border-color: var(--p2); box-shadow: 0 0 0 4px var(--p2-soft), 0 0 30px var(--p2-soft); transform: translateY(-2px); }
+.score.bump { animation: bump .5s ease; }
+@keyframes bump { 40% { transform: scale(1.35); } }
+.vs { font: 800 13px var(--display); color: var(--muted); letter-spacing: .1em; }
+.status { text-align: center; font: 700 17px var(--display); min-height: 1.5em; }
+.status .c1 { color: var(--p1); } .status .c2 { color: var(--p2); }
+.progress { height: 4px; border-radius: 4px; background: var(--rule); overflow: hidden; }
+.progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--p1), var(--star), var(--p2)); transition: width .4s ease; }
+.stage { position: relative; width: min(100%, 620px, calc(100vh - 260px)); min-width: min(100%, 280px); aspect-ratio: 1; align-self: center; max-width: 100%; }
+.stage svg.board { width: 100%; height: 100%; display: block; overflow: visible; }
+.stage canvas.fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.toolbar { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.codechip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; border: 1px dashed var(--rule); color: var(--muted); font-size: 13px; }
+.codechip code { font: 700 14px var(--mono); color: var(--star); letter-spacing: .15em; }
+
+/* board pieces */
+.dot { fill: var(--star); filter: drop-shadow(0 0 4px rgba(255,231,168,.8)); }
+.dot.twinkle { animation: tw 3.2s ease-in-out infinite; }
+@keyframes tw { 50% { opacity: .55; } }
+.guide { stroke: rgba(154, 162, 209, 0.16); stroke-width: 2; stroke-dasharray: 2 8; stroke-linecap: round; }
+.ln { stroke-width: 8; stroke-linecap: round; fill: none; opacity: 0; }
+.ln.preview { opacity: .45; stroke-dasharray: none; }
+.ln.o1, .ln.o2 { opacity: 1; }
+.ln.o1, .ln.preview.c1 { stroke: var(--p1); }
+.ln.o2, .ln.preview.c2 { stroke: var(--p2); }
+.ln.o1 { filter: drop-shadow(0 0 6px rgba(71,224,200,.7)); }
+.ln.o2 { filter: drop-shadow(0 0 6px rgba(255,127,150,.7)); }
+.ln.draw { animation: draw .35s ease-out both; }
+@keyframes draw { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+.ln.draw { stroke-dasharray: 100; }
+.ln.last { stroke-width: 11; }
+.hit { stroke: transparent; stroke-width: 34; stroke-linecap: round; cursor: pointer; }
+.hit.taken { cursor: default; pointer-events: none; }
+.locked .hit { cursor: not-allowed; }
+.box { opacity: 0; transform-box: fill-box; transform-origin: center; }
+.box.o1 { fill: var(--p1-soft); stroke: var(--p1); }
+.box.o2 { fill: var(--p2-soft); stroke: var(--p2); }
+.box.o1, .box.o2 { opacity: 1; stroke-width: 1.5; stroke-opacity: .5; }
+.box.pop { animation: pop .55s cubic-bezier(.2,1.6,.4,1) both; }
+@keyframes pop { from { transform: scale(.2); opacity: 0; } }
+.initial { font: 800 34px var(--display); text-anchor: middle; dominant-baseline: central; opacity: 0; pointer-events: none; }
+.initial.o1 { fill: var(--p1); opacity: .9; }
+.initial.o2 { fill: var(--p2); opacity: .9; }
+
+/* ---------- Overlays ---------- */
+.overlay { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: rgba(6, 9, 26, 0.72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px; }
+.card { width: min(440px, 100%); background: var(--sky-2); border: 1px solid var(--rule); border-radius: 24px; padding: 28px 24px; text-align: center; display: flex; flex-direction: column; gap: 14px; align-items: center; animation: rise .4s ease both; }
+.card h2 { font: 800 34px var(--display); margin: 0; line-height: 1.05; text-wrap: balance; }
+.card p { margin: 0; color: var(--muted); }
+.final { display: flex; gap: 18px; align-items: baseline; font: 700 44px var(--mono); }
+.final .s1 { color: var(--p1); } .final .s2 { color: var(--p2); }
+.final small { font: 600 14px var(--body); color: var(--muted); }
+.btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.bigcode { font: 700 44px var(--mono); letter-spacing: .25em; color: var(--star); padding-left: .25em; }
+.coin { width: 120px; height: 120px; perspective: 600px; }
+.coin-inner { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; }
+.coin-inner.spin1 { animation: flip1 1.6s cubic-bezier(.3,.1,.2,1) forwards; }
+.coin-inner.spin2 { animation: flip2 1.6s cubic-bezier(.3,.1,.2,1) forwards; }
+@keyframes flip1 { from { transform: rotateY(0) } to { transform: rotateY(1800deg) } }
+@keyframes flip2 { from { transform: rotateY(0) } to { transform: rotateY(1980deg) } }
+.face { position: absolute; inset: 0; border-radius: 50%; display: grid; place-items: center; font: 800 40px var(--display); backface-visibility: hidden; -webkit-backface-visibility: hidden; color: #10142e; }
+.face.f1 { background: radial-gradient(circle at 35% 30%, #b9fff2, var(--p1)); box-shadow: 0 0 40px var(--p1-soft); }
+.face.f2 { background: radial-gradient(circle at 35% 30%, #ffd6de, var(--p2)); transform: rotateY(180deg); box-shadow: 0 0 40px var(--p2-soft); }
+.spinner { width: 46px; height: 46px; border-radius: 50%; border: 3px solid var(--rule); border-top-color: var(--star); animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--sky-2); border: 1px solid var(--rule); padding: 10px 16px; border-radius: 12px; z-index: 20; font-weight: 600; font-size: 14px; max-width: calc(100% - 32px); }
+
+@media (max-width: 760px) {
+  .hero { grid-template-columns: 1fr; }
+  .demo { max-width: 220px; order: -1; }
+  .modes { grid-template-columns: 1fr; }
+  .mode { flex-direction: row; align-items: center; gap: 12px; }
+  .mode svg { margin: 0; flex: none; }
+  .row, .lobby, .names { grid-template-columns: 1fr; }
+  .rules { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .player { padding: 10px; gap: 8px; }
+  .player .score { font-size: 26px; }
+  .vs { display: none; }
+  .hud { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .stage { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="stars" aria-hidden="true"></canvas>
+<div class="app" id="app"></div>
+<div id="layer"></div>
+
+<script>
+(() => {
+"use strict";
+
+/* ============ Utilities ============ */
+const $ = (s, r = document) => r.querySelector(s);
+const el = (tag, attrs = {}, ...kids) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const k of kids.flat()) if (k != null) n.append(k.nodeType ? k : document.createTextNode(k));
+  return n;
+};
+const SVGNS = "http://www.w3.org/2000/svg";
+const sv = (tag, attrs = {}) => { const n = document.createElementNS(SVGNS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); return n; };
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("starlines." + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("starlines." + k, JSON.stringify(v)); } catch {} },
+};
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const rand = (a) => a[Math.floor(Math.random() * a.length)];
+const clean = (s, d) => (String(s || "").replace(/\s+/g, " ").trim().slice(0, 16) || d);
+let tabId;
+try { tabId = sessionStorage.getItem("starlines.tab"); if (!tabId) { tabId = Math.random().toString(36).slice(2, 12); sessionStorage.setItem("starlines.tab", tabId); } }
+catch { tabId = Math.random().toString(36).slice(2, 12); }
+
+function toast(msg) {
+  const t = el("div", { class: "toast", role: "status" }, msg);
+  document.body.append(t);
+  setTimeout(() => t.remove(), 2600);
+}
+
+/* ============ Game engine (pure) ============ */
+// n = dots per side. h[r*(n-1)+c] for r<n, c<n-1. v[r*n+c] for r<n-1, c<n. boxes b[r*(n-1)+c].
+function newGame(n, first) {
+  const L = n * (n - 1), B = (n - 1) * (n - 1);
+  return { n, h: Array(L).fill(0), v: Array(L).fill(0), b: Array(B).fill(0), s1: 0, s2: 0, turn: first, first, moves: 0, last: null, status: "playing", round: 1 };
+}
+function boxesOfLine(n, t, i) {
+  const m = n - 1, out = [];
+  if (t === "h") { const r = Math.floor(i / m), c = i % m; if (r > 0) out.push((r - 1) * m + c); if (r < m) out.push(r * m + c); }
+  else { const r = Math.floor(i / n), c = i % n; if (c > 0) out.push(r * m + c - 1); if (c < m) out.push(r * m + c); }
+  return out;
+}
+function boxLines(n, bi) {
+  const m = n - 1, r = Math.floor(bi / m), c = bi % m;
+  return [["h", r * m + c], ["h", (r + 1) * m + c], ["v", r * n + c], ["v", r * n + c + 1]];
+}
+const sides = (g, bi) => boxLines(g.n, bi).reduce((a, [t, i]) => a + (g[t][i] ? 1 : 0), 0);
+function freeLines(g) {
+  const out = [];
+  g.h.forEach((x, i) => { if (!x) out.push(["h", i]); });
+  g.v.forEach((x, i) => { if (!x) out.push(["v", i]); });
+  return out;
+}
+function applyMove(g, t, i, p) {
+  const ng = { ...g, h: g.h.slice(), v: g.v.slice(), b: g.b.slice() };
+  ng[t][i] = p;
+  let made = 0;
+  for (const bi of boxesOfLine(g.n, t, i)) if (!ng.b[bi] && sides(ng, bi) === 4) { ng.b[bi] = p; made++; }
+  ng["s" + p] += made;
+  if (!made) ng.turn = 3 - p;
+  ng.moves = g.moves + 1;
+  ng.last = { t, i, p };
+  if (ng.s1 + ng.s2 === ng.b.length) ng.status = "done";
+  return ng;
+}
+
+/* ============ Bot ============ */
+function completes(g, t, i) { return boxesOfLine(g.n, t, i).some((bi) => !g.b[bi] && sides(g, bi) === 3); }
+function isSafe(g, t, i) { return boxesOfLine(g.n, t, i).every((bi) => sides(g, bi) < 2); }
+function giveaway(g, t, i) {
+  // play the line, then let the opponent greedily take everything that falls; count it
+  let s = applyMove(g, t, i, g.turn), guard = 0;
+  const base = s.s1 + s.s2;
+  while (guard++ < 200) {
+    const m = freeLines(s).find(([a, b]) => completes(s, a, b));
+    if (!m) break;
+    s = applyMove(s, m[0], m[1], 3 - g.turn);
+  }
+  return s.s1 + s.s2 - base;
+}
+function botMove(g, level) {
+  const free = freeLines(g);
+  const caps = free.filter(([t, i]) => completes(g, t, i));
+  const safe = free.filter(([t, i]) => isSafe(g, t, i));
+  if (level === "easy") {
+    if (caps.length && Math.random() < 0.6) return rand(caps);
+    if (safe.length && Math.random() < 0.5) return rand(safe);
+    return rand(free);
+  }
+  if (caps.length) {
+    if (level === "hard" && !safe.length) {
+      // double-dealing: if this capture run is the last 2 boxes of a long chain and more chains remain, hand them back
+      const dd = doubleDeal(g, caps);
+      if (dd) return dd;
+    }
+    return rand(caps);
+  }
+  if (safe.length) return rand(safe);
+  // sacrifice the fewest boxes
+  let best = Infinity, picks = [];
+  for (const [t, i] of free) {
+    const cost = level === "hard" ? giveaway(g, t, i) : boxesOfLine(g.n, t, i).filter((bi) => sides(g, bi) === 2).length;
+    if (cost < best) { best = cost; picks = [[t, i]]; } else if (cost === best) picks.push([t, i]);
+  }
+  return rand(picks);
+}
+function doubleDeal(g, caps) {
+  // Only when exactly one box is capturable and taking it leaves a single box with 3 sides (a 2-chain end),
+  // and the remaining board still has a big chain to win back.
+  if (caps.length !== 1) return null;
+  const [t, i] = caps[0];
+  const after = applyMove(g, t, i, 2);
+  const next = freeLines(after).filter(([a, b]) => completes(after, a, b));
+  if (next.length !== 1) return null;
+  const after2 = applyMove(after, next[0][0], next[0][1], 2);
+  if (freeLines(after2).some(([a, b]) => completes(after2, a, b))) return null;
+  const remaining = after2.b.length - after2.s1 - after2.s2;
+  if (remaining < 4) return null;
+  // the double-dealing move: draw the far side of the second box instead of taking the first
+  const bi = boxesOfLine(g.n, t, i).find((x) => !g.b[x] && sides(g, x) === 3);
+  const target = boxesOfLine(g.n, t, i).find((x) => x !== bi);
+  if (target == null) return null;
+  const cand = boxLines(g.n, target).find(([a, b]) => !g[a][b] && !(a === t && b === i) && !boxesOfLine(g.n, a, b).includes(bi));
+  if (!cand) return null;
+  // verify it doesn't complete anything
+  return completes(g, cand[0], cand[1]) ? null : cand;
+}
+
+/* ============ Sound ============ */
+const sound = {
+  on: store.get("sound", true), ctx: null,
+  ensure() { if (!this.ctx) { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch {} } if (this.ctx && this.ctx.state === "suspended") this.ctx.resume(); },
+  tone(freq, dur = 0.12, type = "sine", vol = 0.08, delay = 0) {
+    if (!this.on || !this.ctx) return;
+    const t0 = this.ctx.currentTime + delay, o = this.ctx.createOscillator(), gn = this.ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t0);
+    gn.gain.setValueAtTime(0, t0); gn.gain.linearRampToValueAtTime(vol, t0 + 0.01); gn.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(gn).connect(this.ctx.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+  },
+  line(p) { this.tone(p === 1 ? 520 : 392, 0.09, "triangle", 0.06); },
+  box(streak) { const scale = [523, 587, 659, 784, 880, 1047, 1175, 1319]; const f = scale[Math.min(streak, scale.length - 1)]; this.tone(f, 0.25, "sine", 0.09); this.tone(f * 1.5, 0.3, "sine", 0.04, 0.05); },
+  win() { [523, 659, 784, 1047].forEach((f, k) => this.tone(f, 0.4, "triangle", 0.07, k * 0.12)); },
+  nope() { this.tone(160, 0.12, "square", 0.03); },
+};
+document.addEventListener("pointerdown", () => sound.ensure(), { once: false, passive: true });
+
+/* ============ Starfield background ============ */
+(function starfield() {
+  const c = $("#stars"), x = c.getContext("2d");
+  let W, H, stars = [], shoot = null;
+  function size() {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    W = c.width = innerWidth * dpr; H = c.height = innerHeight * dpr;
+    stars = Array.from({ length: Math.round((innerWidth * innerHeight) / 5200) }, () => ({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.3 * dpr + 0.2, p: Math.random() * Math.PI * 2, s: 0.5 + Math.random() * 1.5 }));
+  }
+  size(); addEventListener("resize", size);
+  function frame(t) {
+    x.clearRect(0, 0, W, H);
+    for (const s of stars) {
+      const a = reduced ? 0.6 : 0.35 + 0.45 * (0.5 + 0.5 * Math.sin(t / 1000 * s.s + s.p));
+      x.globalAlpha = a; x.fillStyle = "#e8e6ff"; x.beginPath(); x.arc(s.x, s.y, s.r, 0, 7); x.fill();
+    }
+    if (!reduced) {
+      if (!shoot && Math.random() < 0.003) shoot = { x: Math.random() * W, y: Math.random() * H * 0.4, l: 0 };
+      if (shoot) {
+        shoot.l += 0.02; const len = 120, dx = shoot.l * 900;
+        const g = x.createLinearGradient(shoot.x + dx, shoot.y + dx * 0.4, shoot.x + dx - len, shoot.y + dx * 0.4 - len * 0.4);
+        g.addColorStop(0, "rgba(255,231,168,.9)"); g.addColorStop(1, "rgba(255,231,168,0)");
+        x.globalAlpha = 1 - shoot.l; x.strokeStyle = g; x.lineWidth = 2; x.beginPath();
+        x.moveTo(shoot.x + dx, shoot.y + dx * 0.4); x.lineTo(shoot.x + dx - len, shoot.y + dx * 0.4 - len * 0.4); x.stroke();
+        if (shoot.l >= 1) shoot = null;
+      }
+    }
+    x.globalAlpha = 1;
+    if (!reduced) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+/* ============ App state ============ */
+const S = {
+  screen: "home",
+  mode: store.get("mode", "bot"),
+  n: store.get("n", 4),
+  diff: store.get("diff", "medium"),
+  first: "toss",
+  name1: store.get("name1", ""),
+  name2: store.get("name2", ""),
+  g: null,          // current game
+  names: { 1: "", 2: "" },
+  me: 1,            // seat for bot/online
+  botBusy: false,
+  streak: 0,
+  online: null,     // { code, ref, unsub, room }
+};
+/* ============ Shared graphics ============ */
+const LOGO = `<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M5 5H23V23" stroke="#47e0c8" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M5 5V23H23" stroke="#ff7f96" stroke-width="2.5" fill="none" stroke-linecap="round"/><g fill="#ffe7a8"><circle cx="5" cy="5" r="2.4"/><circle cx="23" cy="5" r="2.4"/><circle cx="5" cy="23" r="2.4"/><circle cx="23" cy="23" r="2.4"/></g></svg>`;
+const ICONS = {
+  bot: `<svg viewBox="0 0 34 34" fill="none" stroke="#ffe7a8" stroke-width="2" stroke-linecap="round"><rect x="6" y="10" width="22" height="17" rx="5"/><path d="M17 10V5"/><circle cx="17" cy="4" r="1.6" fill="#ffe7a8"/><circle cx="12.5" cy="18" r="2" fill="#47e0c8" stroke="none"/><circle cx="21.5" cy="18" r="2" fill="#47e0c8" stroke="none"/><path d="M13 23h8"/></svg>`,
+  online: `<svg viewBox="0 0 34 34" fill="none" stroke="#ffe7a8" stroke-width="2" stroke-linecap="round"><circle cx="17" cy="17" r="11"/><path d="M6 17h22M17 6c4 4 4 18 0 22M17 6c-4 4-4 18 0 22"/><circle cx="27" cy="8" r="3" fill="#ff7f96" stroke="none"/></svg>`,
+  local: `<svg viewBox="0 0 34 34" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="12" r="4" stroke="#47e0c8"/><path d="M4 27c0-5 3-8 7-8s7 3 7 8" stroke="#47e0c8"/><circle cx="23" cy="12" r="4" stroke="#ff7f96"/><path d="M16 27c0-5 3-8 7-8s7 3 7 8" stroke="#ff7f96"/></svg>`,
+};
+
+function miniGrid(canvas, n, active) {
+  const dpr = Math.min(devicePixelRatio || 1, 2), s = 44;
+  canvas.width = s * dpr; canvas.height = s * dpr;
+  const x = canvas.getContext("2d"); x.scale(dpr, dpr);
+  const pad = 6, step = (s - pad * 2) / (n - 1);
+  x.fillStyle = active ? "#ffe7a8" : "#9aa2d1";
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) { x.beginPath(); x.arc(pad + c * step, pad + r * step, n > 6 ? 1.4 : 2, 0, 7); x.fill(); }
+}
+
+/* Hero demo: a tiny game playing itself */
+function startDemo(svg) {
+  const n = 4, step = 100, pad = 30;
+  svg.setAttribute("viewBox", `0 0 ${pad * 2 + step * (n - 1)} ${pad * 2 + step * (n - 1)}`);
+  let g = newGame(n, 1), timer;
+  const layer = sv("g"); svg.append(layer);
+  function draw() {
+    layer.textContent = "";
+    g.b.forEach((o, bi) => { if (!o) return; const r = Math.floor(bi / (n - 1)), c = bi % (n - 1);
+      layer.append(sv("rect", { x: pad + c * step + 8, y: pad + r * step + 8, width: step - 16, height: step - 16, rx: 12, class: "box o" + o })); });
+    for (const t of ["h", "v"]) g[t].forEach((o, i) => { if (!o) return; const [x1, y1, x2, y2] = lineXY(n, t, i, step, pad);
+      layer.append(sv("line", { x1, y1, x2, y2, class: "ln o" + o + (g.last && g.last.t === t && g.last.i === i ? " draw" : ""), pathLength: 100 })); });
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) layer.append(sv("circle", { cx: pad + c * step, cy: pad + r * step, r: 7, class: "dot" }));
+  }
+  function tick() {
+    if (!svg.isConnected) return;
+    if (g.status === "done") { g = newGame(n, Math.random() < .5 ? 1 : 2); draw(); timer = setTimeout(tick, 900); return; }
+    const p = g.turn;
+    const m = botMove(p === 1 ? g : swap(g), "medium");
+    g = applyMove(g, m[0], m[1], p); draw();
+    timer = setTimeout(tick, reduced ? 1600 : 520);
+  }
+  draw(); timer = setTimeout(tick, 600);
+}
+function swap(g) { return { ...g }; } // bot logic is symmetric enough for the demo
+
+function lineXY(n, t, i, step, pad) {
+  if (t === "h") { const r = Math.floor(i / (n - 1)), c = i % (n - 1); return [pad + c * step, pad + r * step, pad + (c + 1) * step, pad + r * step]; }
+  const r = Math.floor(i / n), c = i % n; return [pad + c * step, pad + r * step, pad + c * step, pad + (r + 1) * step];
+}
+
+/* ============ Screens ============ */
+const app = $("#app");
+function render() {
+  if (S.screen === "home") renderHome();
+  else if (S.screen === "online") renderOnline();
+  else if (S.screen === "game") renderGameScreen();
+}
+function brandBar(extra) {
+  const b = el("div", { class: "brand" });
+  const logo = el("div", { class: "logo" }); logo.innerHTML = LOGO + "<span>Starlines</span>";
+  b.append(logo, el("div", { style: "display:flex;gap:8px;flex-wrap:wrap" }, extra || null, soundBtn()));
+  return b;
+}
+function soundBtn() {
+  const b = el("button", { class: "icon-btn", id: "sound-btn", "aria-pressed": String(sound.on), onclick: () => { sound.on = !sound.on; store.set("sound", sound.on); sound.ensure(); b.setAttribute("aria-pressed", String(sound.on)); b.textContent = sound.on ? "Sound on" : "Sound off"; } }, sound.on ? "Sound on" : "Sound off");
+  return b;
+}
+
+function renderHome() {
+  app.textContent = "";
+  const scr = el("div", { class: "screen" });
+  const demo = sv("svg", { class: "demo", role: "img", "aria-label": "A sample game playing itself" });
+  scr.append(brandBar(),
+    el("section", { class: "hero" },
+      el("div", {},
+        (() => { const h = el("h1"); h.innerHTML = 'Join the <span class="a">stars</span>.<br>Claim the <span class="b">sky</span>.'; return h; })(),
+        el("p", {}, "Dots and boxes, played across a night sky. Draw one line between two stars on your turn. Close the fourth side of a square to capture it and move again. Most squares when the sky is full wins.")),
+      demo));
+
+  const panel = el("section", { class: "panel", "aria-label": "Game setup" });
+  // Mode
+  const modes = el("div", { class: "modes" });
+  for (const [id, title, sub] of [["bot", "Play a bot", "Three levels, from casual to cunning"], ["online", "Online with a friend", "Share a 4-letter code and play live"], ["local", "Same screen", "Pass the device between two players"]]) {
+    const b = el("button", { class: "mode", "aria-pressed": String(S.mode === id), onclick: () => { S.mode = id; store.set("mode", id); renderHome(); } });
+    b.innerHTML = ICONS[id]; b.append(el("div", {}, el("strong", {}, title), el("br"), el("span", {}, sub)));
+    modes.append(b);
+  }
+  panel.append(el("div", { class: "field" }, el("div", { class: "label" }, "How do you want to play?"), modes));
+
+  // Grid size
+  const sizes = el("div", { class: "sizes", role: "group", "aria-label": "Number of dots" });
+  for (const n of [3, 4, 5, 6, 7, 8]) {
+    const cv = el("canvas", { "aria-hidden": "true" });
+    const b = el("button", { class: "size", "aria-pressed": String(S.n === n), onclick: () => { S.n = n; store.set("n", n); renderHome(); } }, cv, el("b", {}, `${n}×${n}`), el("small", {}, `${(n - 1) ** 2} boxes`));
+    miniGrid(cv, n, S.n === n);
+    sizes.append(b);
+  }
+  panel.append(el("div", { class: "field" }, el("div", { class: "label" }, "Dots per side"), sizes));
+
+  // Options per mode
+  if (S.mode === "bot") {
+    const diff = seg([["easy", "Easy"], ["medium", "Medium"], ["hard", "Hard"]], S.diff, (v) => { S.diff = v; store.set("diff", v); renderHome(); });
+    const first = seg([["toss", "Toss a coin"], ["1", "Me"], ["2", "Bot"]], S.first, (v) => { S.first = v; renderHome(); });
+    panel.append(el("div", { class: "row" }, el("div", { class: "field" }, el("div", { class: "label" }, "Bot level"), diff), el("div", { class: "field" }, el("div", { class: "label" }, "Who goes first"), first)));
+    panel.append(el("div", { class: "field" }, el("div", { class: "label" }, "Your name"), nameInput("name1", "p1", "You")));
+  } else if (S.mode === "local") {
+    const first = seg([["toss", "Toss a coin"], ["1", "Player 1"], ["2", "Player 2"]], S.first, (v) => { S.first = v; renderHome(); });
+    panel.append(el("div", { class: "field" }, el("div", { class: "label" }, "Players"), el("div", { class: "names" }, nameInput("name1", "p1", "Player 1"), nameInput("name2", "p2", "Player 2"))));
+    panel.append(el("div", { class: "field" }, el("div", { class: "label" }, "Who goes first"), first));
+  } else {
+    panel.append(el("div", { class: "field" }, el("div", { class: "label" }, "Your name"), nameInput("name1", "p1", "You")));
+    panel.append(el("p", { class: "note" }, "Next you'll create a table and get a code, or join your friend's table. Your friend opens the invite link you send them. The first move is decided by a coin toss."));
+  }
+  panel.append(el("button", { class: "cta", id: "start-btn", onclick: start }, S.mode === "online" ? "Go to the lobby" : "Start game"));
+  scr.append(panel);
+
+  scr.append(el("section", { class: "rules", "aria-label": "Rules" },
+    el("div", {}, el("b", {}, "Take turns"), "Draw one horizontal or vertical line between two neighbouring stars. No diagonals."),
+    el("div", {}, el("b", {}, "Close a box"), "Draw the fourth side of a 1×1 square to win it. Your initial is stamped inside."),
+    el("div", {}, el("b", {}, "Go again"), "Every box you close earns another turn, so long chains can swing a game."),
+    el("div", {}, el("b", {}, "Full sky"), "When every line is drawn, the most boxes wins. Equal boxes is a draw.")));
+  app.append(scr);
+  startDemo(demo);
+}
+function seg(opts, val, on) {
+  const s = el("div", { class: "seg", role: "group" });
+  for (const [v, l] of opts) s.append(el("button", { "aria-pressed": String(String(val) === v), onclick: () => on(v) }, l));
+  return s;
+}
+function nameInput(key, cls, ph) {
+  const i = el("input", { type: "text", id: "in-" + key, maxlength: 16, placeholder: ph, value: S[key], autocomplete: "off", "aria-label": ph + " name" });
+  i.addEventListener("input", () => { S[key] = i.value; store.set(key, i.value); });
+  return el("div", { class: "name-wrap " + cls }, i);
+}
+
+function start() {
+  sound.ensure();
+  if (S.mode === "online") { S.screen = "online"; render(); return; }
+  if (S.mode === "bot") S.names = { 1: clean(S.name1, "You"), 2: `Bot · ${S.diff[0].toUpperCase() + S.diff.slice(1)}` };
+  else S.names = { 1: clean(S.name1, "Player 1"), 2: clean(S.name2, "Player 2") };
+  S.me = 1;
+  const go = (first) => { S.g = newGame(S.n, first); S.streak = 0; S.screen = "game"; render(); maybeBot(); };
+  if (S.first === "toss") coinToss(go); else go(Number(S.first));
+}
+
+/* Coin toss overlay */
+function coinToss(done, forced) {
+  const winner = forced || (Math.random() < 0.5 ? 1 : 2);
+  const layer = $("#layer"); layer.textContent = "";
+  const inner = el("div", { class: "coin-inner" }, el("div", { class: "face f1" }, initialOf(S.names[1])), el("div", { class: "face f2" }, initialOf(S.names[2])));
+  const msg = el("p", {}, "Tossing the coin…");
+  const ov = el("div", { class: "overlay" }, el("div", { class: "card" }, el("h2", {}, "Coin toss"), el("div", { class: "coin" }, inner), msg));
+  layer.append(ov);
+  requestAnimationFrame(() => inner.classList.add(winner === 1 ? "spin1" : "spin2"));
+  sound.tone(700, 0.08, "triangle", 0.05);
+  setTimeout(() => { msg.innerHTML = ""; msg.append(el("span", { style: `color:var(--p${winner});font-weight:700` }, S.names[winner]), " goes first"); sound.tone(880, 0.2, "sine", 0.07); }, reduced ? 100 : 1650);
+  setTimeout(() => { layer.textContent = ""; done(winner); }, reduced ? 1100 : 2500);
+}
+const initialOf = (name) => (String(name).replace(/^Bot · /, "B").trim()[0] || "?").toUpperCase();
+
+/* ============ Online (WebSocket relay) ============ */
+const RELAY_URL = "wss://tic-tac-toe-relay.tic-tac-toe-relay-cf.workers.dev";
+const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const genCode = () => Array.from({ length: 4 }, () => rand(CODE_CHARS.split(""))).join("");
+const inviteUrl = (code) => location.href.split("#")[0] + "#" + code;
+
+function renderOnline(prefill) {
+  app.textContent = "";
+  const back = el("button", { class: "icon-btn", onclick: () => { leaveOnline(true); S.screen = "home"; render(); } }, "← Back");
+  const scr = el("div", { class: "screen" }, brandBar(back));
+  scr.append(el("div", {}, el("h1", { style: "font:800 clamp(34px,6vw,56px)/1 var(--display);margin:0" }, "Online lobby"),
+    el("p", { class: "note", style: "margin-top:8px" }, `Playing as ${clean(S.name1, "You")}.`)));
+  if (!("WebSocket" in window)) {
+    scr.append(el("div", { class: "panel" }, el("b", {}, "Online play isn't supported in this browser."), el("button", { class: "ghost", onclick: () => { S.mode = "bot"; S.screen = "home"; render(); } }, "Play a bot instead")));
+    app.append(scr); return;
+  }
+  const err = el("div", { class: "error", role: "alert", id: "online-err" });
+  const create = el("div", { class: "panel" }, el("div", { class: "label" }, "Host a game"),
+    el("p", { class: "note" }, `Create a ${S.n}×${S.n} table. You'll get a code and a link to send to your friend.`),
+    el("button", { class: "cta", id: "create-btn", onclick: (e) => createTable(e.currentTarget, err) }, "Create table"));
+  const codeIn = el("input", { type: "text", id: "join-code", maxlength: 4, placeholder: "CODE", "aria-label": "Table code", value: prefill || "" });
+  const joinBtn = el("button", { class: "cta", id: "join-btn", style: "padding:12px 18px;font-size:16px", onclick: () => joinTable(codeIn.value, err, joinBtn) }, "Join");
+  codeIn.addEventListener("keydown", (e) => { if (e.key === "Enter") joinTable(codeIn.value, err, joinBtn); });
+  const join = el("div", { class: "panel" }, el("div", { class: "label" }, "Join a friend"),
+    el("p", { class: "note" }, "Enter the 4-letter code your friend sent you. The grid size is the one they chose."),
+    el("div", { class: "join-row" }, codeIn, joinBtn));
+  scr.append(el("div", { class: "lobby" }, create, join), err);
+  app.append(scr);
+  if (prefill) joinTable(prefill, err, joinBtn);
+}
+
+function connect(code, handlers) {
+  const ws = new WebSocket(RELAY_URL + "?room=" + encodeURIComponent("DAB-" + code));
+  ws.onmessage = (e) => { let m; try { m = JSON.parse(e.data); } catch { return; } handlers.message(m); };
+  ws.onclose = () => handlers.close && handlers.close();
+  ws.onerror = () => {};
+  return ws;
+}
+function send(msg) { const o = S.online; if (o && o.ws && o.ws.readyState === 1) o.ws.send(JSON.stringify(msg)); }
+
+function createTable(btn, err, tries = 0) {
+  btn.disabled = true; err.textContent = "";
+  const code = genCode();
+  const ws = connect(code, {
+    message(m) {
+      if (m.type !== "assigned") return onlineMessage(m);
+      if (m.role !== "X") { ws.onclose = null; ws.close(); if (tries < 4) createTable(btn, err, tries + 1); else { err.textContent = "Couldn't create a table. Try again."; btn.disabled = false; } return; }
+      const g = { ...newGame(S.n, Math.random() < 0.5 ? 1 : 2), status: "waiting" };
+      S.online = { code, ws, seat: 1, peer: false, closing: false };
+      S.names = { 1: clean(S.name1, "Host"), 2: "Waiting…" };
+      S.me = 1; S.g = g; S.streak = 0; S.screen = "game";
+      render();
+    },
+    close() { onlineClosed(code); },
+  });
+  ws.addEventListener("error", () => { if (!S.online) { err.textContent = "Couldn't reach the game server. Check your connection and try again."; btn.disabled = false; } });
+}
+function joinTable(raw, err, btn) {
+  const code = String(raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  err.textContent = "";
+  if (code.length !== 4) { err.textContent = "Codes are 4 characters, like K7QX."; return; }
+  if (btn) btn.disabled = true;
+  let settled = false;
+  const fail = (msg) => { if (settled) return; settled = true; err.textContent = msg; if (btn) btn.disabled = false; };
+  const ws = connect(code, {
+    message(m) {
+      if (m.type === "assigned") {
+        if (m.role !== "O") { ws.onclose = null; ws.close(); fail(`No open table with code ${code}. Check the code, and make sure your friend is still on the waiting screen.`); return; }
+        S.online = { code, ws, seat: 2, peer: false, closing: false };
+        S.me = 2; S.g = null; S.streak = 0;
+        S.names = { 1: "Host", 2: clean(S.name1, "Guest") };
+        err.textContent = "Connecting to your friend…";
+        return;
+      }
+      if (m.type === "state" && !S.g) settled = true;
+      onlineMessage(m);
+    },
+    close() { if (!S.online) fail("Couldn't join that table. Try again."); else onlineClosed(code); },
+  });
+  ws.addEventListener("error", () => fail("Couldn't join. That table may already have two players, or your connection dropped. Try again."));
+  setTimeout(() => { if (!S.g && !settled) { fail("Your friend's table didn't respond. Ask them to check they're still waiting."); try { ws.onclose = null; ws.close(); } catch {} S.online = null; } }, 10000);
+}
+
+function onlineMessage(m) {
+  const o = S.online; if (!o) return;
+  if (m.type === "peer-joined") {
+    o.peer = true;
+    send({ type: "hello", name: clean(S.name1, o.seat === 1 ? "Host" : "Guest") });
+    if (o.seat === 1 && S.g) {
+      if (S.g.status === "waiting") { const prev = S.g; S.g = { ...S.g, status: "playing" }; if (S.screen === "game") updateBoard(prev, S.g); }
+      send({ type: "state", g: S.g });
+    } else if (S.screen === "game" && S.g) refreshStatus();
+    if (S.screen === "game") $("#layer").querySelector("#gone-card") && ($("#layer").textContent = "");
+    return;
+  }
+  if (m.type === "hello") {
+    S.names[o.seat === 1 ? 2 : 1] = clean(m.name, o.seat === 1 ? "Guest" : "Host");
+    if (o.seat === 2) S.names[2] = clean(S.name1, "Guest");
+    if (S.screen === "game" && S.g) { refreshNames(); if (o.seat === 1 && S.g.status === "playing" && !o.greeted) { o.greeted = true; toast(`${S.names[2]} joined. Let's play!`); sound.tone(660, 0.15); sound.tone(990, 0.2, "sine", 0.06, 0.1); } }
+    return;
+  }
+  if (m.type === "state" && m.g && typeof m.g.n === "number") return receive(m.g);
+  if (m.type === "leave") { o.peer = false; if (S.g) { S.g = { ...S.g, status: "left", leftBy: o.seat === 1 ? 2 : 1 }; showLeft(); refreshStatus(); } return; }
+  if (m.type === "peer-left") { o.peer = false; if (S.g && S.g.status === "playing") showGone(); }
+}
+function refreshNames() { const a = $("#nm1"), b = $("#nm2"); if (a) a.textContent = S.names[1]; if (b) b.textContent = S.names[2]; refreshStatus(); }
+function onlineClosed(code) {
+  const o = S.online; if (!o || o.code !== code || o.closing) return;
+  // the socket dropped: reconnect to the same table and keep our seat
+  setTimeout(() => {
+    if (S.online !== o) return;
+    o.ws = connect(code, { message(m) { if (m.type !== "assigned") onlineMessage(m); }, close() { onlineClosed(code); } });
+  }, 1500);
+}
+function newer(a, b) {
+  if (!b) return true;
+  if ((a.round || 1) !== (b.round || 1)) return (a.round || 1) > (b.round || 1);
+  return a.moves >= b.moves;
+}
+function receive(data) {
+  if (!S.online) return;
+  const prev = S.g;
+  if (!newer(data, prev)) { if (prev && S.online.peer) send({ type: "state", g: prev }); return; }
+  const roundChanged = prev && (data.round || 1) !== (prev.round || 1);
+  if (prev && !roundChanged && data.moves === prev.moves && data.status === prev.status) return;
+  S.g = data;
+  if (!prev || S.screen !== "game") { S.streak = 0; S.screen = "game"; render(); return; }
+  if (roundChanged) { $("#layer").textContent = ""; S.streak = 0; renderGameScreen(); return; }
+  updateBoard(prev, data);
+}
+function writeOnline(g) { send({ type: "state", g }); }
+function leaveOnline(tellPeer) {
+  const o = S.online; if (!o) return;
+  S.online = null; o.closing = true;
+  if (tellPeer) try { o.ws.send(JSON.stringify({ type: "leave" })); } catch {}
+  try { o.ws.close(); } catch {}
+}
+
+/* ============ Game screen ============ */
+const STEP = 100, PAD = 40;
+let boardEls = null;
+function renderGameScreen() {
+  app.textContent = "";
+  const g = S.g;
+  const menu = el("button", { class: "icon-btn", id: "menu-btn", onclick: confirmLeave }, "← Menu");
+  const scr = el("div", { class: "screen", style: "gap:16px" }, brandBar(menu));
+
+  const hud = el("div", { class: "hud" },
+    playerChip(1), el("div", { class: "vs" }, "VS"), playerChip(2));
+  const progress = el("div", { class: "progress", "aria-hidden": "true" }, el("i", { id: "prog" }));
+  const status = el("div", { class: "status", id: "status", "aria-live": "polite" });
+  const stage = el("div", { class: "stage", id: "stage" });
+  const svg = sv("svg", { class: "board", viewBox: `0 0 ${PAD * 2 + STEP * (g.n - 1)} ${PAD * 2 + STEP * (g.n - 1)}`, role: "group", "aria-label": `${g.n} by ${g.n} dot grid` });
+  const fx = el("canvas", { class: "fx", "aria-hidden": "true" });
+  stage.append(svg, fx);
+  const tools = el("div", { class: "toolbar" });
+  if (S.online) tools.append(el("div", { class: "codechip" }, "Table ", el("code", {}, S.online.code)));
+  if (S.mode !== "online") tools.append(el("button", { class: "ghost", id: "restart-btn", onclick: () => restartLocal() }, "Restart"));
+  scr.append(hud, progress, status, stage, tools);
+  app.append(scr);
+  buildBoard(svg, fx, g);
+  updateBoard(null, g);
+}
+function playerChip(p) {
+  const tag = S.mode === "online" ? (S.me === p ? "You" : "Friend") : S.mode === "bot" ? (p === 1 ? "You" : "Bot") : `Player ${p}`;
+  return el("div", { class: `player p${p}${p === 2 ? " right" : ""}`, id: "chip" + p },
+    el("div", { class: "orb" }), el("div", { class: "who" }, el("span", { class: "nm", id: "nm" + p }, S.names[p]), el("span", { class: "tag", id: "tag" + p }, tag)),
+    el("div", { class: "score", id: "sc" + p }, "0"));
+}
+
+function buildBoard(svg, fx, g) {
+  const n = g.n, m = n - 1;
+  const gBoxes = sv("g"), gGuides = sv("g"), gLines = sv("g"), gDots = sv("g"), gHits = sv("g");
+  const boxes = [], inits = [], lines = { h: [], v: [] }, hits = { h: [], v: [] };
+  for (let bi = 0; bi < m * m; bi++) {
+    const r = Math.floor(bi / m), c = bi % m;
+    const rect = sv("rect", { x: PAD + c * STEP + 10, y: PAD + r * STEP + 10, width: STEP - 20, height: STEP - 20, rx: 14, class: "box" });
+    const tx = sv("text", { x: PAD + c * STEP + STEP / 2, y: PAD + r * STEP + STEP / 2, class: "initial" });
+    gBoxes.append(rect, tx); boxes.push(rect); inits.push(tx);
+  }
+  for (const t of ["h", "v"]) {
+    g[t].forEach((_, i) => {
+      const [x1, y1, x2, y2] = lineXY(n, t, i, STEP, PAD);
+      gGuides.append(sv("line", { x1, y1, x2, y2, class: "guide" }));
+      const ln = sv("line", { x1, y1, x2, y2, class: "ln", pathLength: 100 });
+      gLines.append(ln); lines[t].push(ln);
+      const label = t === "h" ? `Horizontal line, row ${Math.floor(i / m) + 1}, between columns ${(i % m) + 1} and ${(i % m) + 2}` : `Vertical line, column ${(i % n) + 1}, between rows ${Math.floor(i / n) + 1} and ${Math.floor(i / n) + 2}`;
+      const hit = sv("line", { x1, y1, x2, y2, class: "hit", tabindex: "0", role: "button", "aria-label": label });
+      hit.addEventListener("pointerenter", () => preview(t, i, true));
+      hit.addEventListener("pointerleave", () => preview(t, i, false));
+      hit.addEventListener("focus", () => preview(t, i, true));
+      hit.addEventListener("blur", () => preview(t, i, false));
+      hit.addEventListener("click", () => play(t, i));
+      hit.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); play(t, i); } });
+      gHits.append(hit); hits[t].push(hit);
+    });
+  }
+  const dots = [];
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    const d = sv("circle", { cx: PAD + c * STEP, cy: PAD + r * STEP, r: n > 6 ? 6 : 7.5, class: "dot" + (Math.random() < 0.3 ? " twinkle" : "") });
+    d.style.animationDelay = (Math.random() * 3).toFixed(2) + "s";
+    gDots.append(d); dots.push(d);
+  }
+  svg.append(gBoxes, gGuides, gLines, gDots, gHits);
+  boardEls = { svg, fx, boxes, inits, lines, hits };
+  setupFx(fx);
+}
+function preview(t, i, on) {
+  if (!boardEls || !S.g) return;
+  const ln = boardEls.lines[t][i];
+  if (S.g[t][i]) return;
+  ln.classList.remove("c1", "c2");
+  ln.classList.toggle("preview", on && canPlay());
+  if (on) ln.classList.add("c" + S.g.turn);
+}
+function canPlay() {
+  const g = S.g; if (!g || g.status !== "playing") return false;
+  if (S.mode === "local") return true;
+  if (S.mode === "bot") return g.turn === 1 && !S.botBusy;
+  return !!S.online && S.online.peer && g.turn === S.me;
+}
+function play(t, i) {
+  const g = S.g;
+  if (!g || g[t][i]) return;
+  if (!canPlay()) { sound.nope(); if (g.status === "playing") wiggle(); return; }
+  const ng = applyMove(g, t, i, g.turn);
+  S.g = ng;
+  updateBoard(g, ng);
+  if (S.mode === "online") writeOnline(ng);
+  else maybeBot();
+}
+function wiggle() {
+  const st = $("#status"); if (!st) return;
+  st.animate([{ transform: "translateX(0)" }, { transform: "translateX(-6px)" }, { transform: "translateX(6px)" }, { transform: "translateX(0)" }], { duration: 260 });
+}
+function maybeBot() {
+  const g = S.g;
+  if (S.mode !== "bot" || !g || g.status !== "playing" || g.turn !== 2 || S.botBusy) return;
+  S.botBusy = true; refreshStatus();
+  const delay = reduced ? 350 : 420 + Math.random() * 380;
+  setTimeout(() => {
+    S.botBusy = false;
+    if (S.g !== g || S.screen !== "game") return;
+    const [t, i] = botMove(mirror(g), S.diff);
+    const ng = applyMove(g, t, i, 2);
+    S.g = ng; updateBoard(g, ng); maybeBot();
+  }, delay);
+}
+// botMove reasons as "player 1 sacrifices to player 2"; ownership values don't matter for that, so pass as-is
+const mirror = (g) => g;
+
+function updateBoard(prev, g) {
+  if (!boardEls) return;
+  const { lines, hits, boxes, inits } = boardEls;
+  let newBoxes = [];
+  for (const t of ["h", "v"]) g[t].forEach((o, i) => {
+    const ln = lines[t][i];
+    const was = prev ? prev[t][i] : o;
+    ln.classList.remove("o1", "o2", "preview", "c1", "c2", "last");
+    if (o) { ln.classList.add("o" + o); hits[t][i].classList.add("taken"); hits[t][i].setAttribute("tabindex", "-1"); }
+    else { hits[t][i].classList.remove("taken"); hits[t][i].setAttribute("tabindex", "0"); ln.classList.remove("draw"); }
+    if (o && !was) { ln.classList.remove("draw"); void ln.getBBox; ln.classList.add("draw"); sound.line(o); }
+  });
+  if (g.last) lines[g.last.t][g.last.i].classList.add("last");
+  g.b.forEach((o, bi) => {
+    boxes[bi].classList.remove("o1", "o2"); inits[bi].classList.remove("o1", "o2");
+    if (o) { boxes[bi].classList.add("o" + o); inits[bi].classList.add("o" + o); inits[bi].textContent = initialOf(S.names[o]); }
+    else inits[bi].textContent = "";
+    const was = prev ? prev.b[bi] : o;
+    if (o && !was) { newBoxes.push(bi); boxes[bi].classList.remove("pop"); void boxes[bi].getBBox(); boxes[bi].classList.add("pop"); }
+  });
+  if (newBoxes.length && prev) {
+    S.streak++;
+    const p = g.b[newBoxes[0]];
+    newBoxes.forEach((bi, k) => { burst(bi, p); setTimeout(() => sound.box(S.streak + k), k * 90); });
+    const sc = $("#sc" + p); if (sc) { sc.classList.remove("bump"); void sc.offsetWidth; sc.classList.add("bump"); }
+  } else if (prev && g.moves !== prev.moves) S.streak = 0;
+  $("#sc1").textContent = g.s1; $("#sc2").textContent = g.s2;
+  $("#nm1").textContent = S.names[1]; $("#nm2").textContent = S.names[2];
+  const total = g.h.length * 2, drawn = g.h.filter(Boolean).length + g.v.filter(Boolean).length;
+  $("#prog").style.width = (drawn / total * 100) + "%";
+  refreshStatus();
+  boardEls.svg.classList.toggle("locked", !canPlay());
+  if (g.status === "done" && (!prev || prev.status !== "done")) setTimeout(showEnd, prev ? 900 : 0);
+  if (g.status === "left" && (!prev || prev.status !== "left")) showLeft();
+  if (prev && prev.status === "waiting" && g.status === "playing") $("#layer").textContent = "";
+  if (g.status === "waiting") showWaiting();
+}
+function refreshStatus() {
+  const g = S.g, st = $("#status"); if (!st || !g) return;
+  [1, 2].forEach((p) => $("#chip" + p).classList.toggle("active", g.status === "playing" && g.turn === p));
+  st.textContent = "";
+  const who = (p) => el("span", { class: "c" + p }, S.names[p]);
+  if (g.status === "waiting") st.append("Waiting for your friend to join…");
+  else if (g.status === "done") st.append(g.s1 === g.s2 ? "The sky is full. It's a draw!" : who(g.s1 > g.s2 ? 1 : 2), g.s1 === g.s2 ? "" : " wins the sky!");
+  else if (g.status === "left") st.append("Your friend left the game.");
+  else if (S.mode === "bot") st.append(g.turn === 1 ? (S.streak ? "Nice! You go again." : "Your move. Draw a line.") : who(2), g.turn === 2 ? " is thinking…" : "");
+  else if (S.mode === "online") st.append(g.turn === S.me ? (S.streak ? "Box! You go again." : "Your move. Draw a line.") : "", g.turn === S.me ? "" : who(g.turn), g.turn === S.me ? "" : "'s move…");
+  else st.append(who(g.turn), S.streak ? " closed a box. Go again!" : "'s turn");
+  const tg1 = $("#tag1"), tg2 = $("#tag2");
+  if (S.mode === "online" && tg1) { tg1.textContent = S.me === 1 ? "You" : "Friend"; tg2.textContent = S.me === 2 ? "You" : "Friend"; }
+}
+
+/* ---------- particles ---------- */
+let fxCtx = null, parts = [], fxRunning = false;
+function setupFx(c) {
+  const resize = () => { const r = c.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2); c.width = r.width * dpr; c.height = r.height * dpr; fxCtx = c.getContext("2d"); fxCtx.setTransform(dpr, 0, 0, dpr, 0, 0); };
+  resize(); new ResizeObserver(resize).observe(c);
+}
+function burst(bi, p) {
+  if (reduced || !fxCtx || !boardEls) return;
+  const n = S.g.n, m = n - 1, r = Math.floor(bi / m), c = bi % m;
+  const box = boardEls.svg.getBoundingClientRect(), vb = PAD * 2 + STEP * m, k = box.width / vb;
+  const cx = (PAD + c * STEP + STEP / 2) * k, cy = (PAD + r * STEP + STEP / 2) * k;
+  const col = p === 1 ? [71, 224, 200] : [255, 127, 150];
+  for (let j = 0; j < 36; j++) {
+    const a = Math.random() * Math.PI * 2, sp = 1 + Math.random() * 4;
+    parts.push({ x: cx, y: cy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 1, r: 1 + Math.random() * 2.5, col: Math.random() < 0.25 ? [255, 231, 168] : col });
+  }
+  if (!fxRunning) { fxRunning = true; requestAnimationFrame(fxLoop); }
+}
+function fxLoop() {
+  const c = fxCtx; if (!c) { fxRunning = false; return; }
+  c.clearRect(0, 0, c.canvas.width, c.canvas.height);
+  parts = parts.filter((q) => q.life > 0);
+  for (const q of parts) {
+    q.x += q.vx; q.y += q.vy; q.vx *= 0.95; q.vy *= 0.95; q.vy += 0.03; q.life -= 0.022;
+    c.globalAlpha = Math.max(q.life, 0); c.fillStyle = `rgb(${q.col.join(",")})`;
+    c.beginPath(); c.arc(q.x, q.y, q.r, 0, 7); c.fill();
+  }
+  c.globalAlpha = 1;
+  if (parts.length) requestAnimationFrame(fxLoop); else fxRunning = false;
+}
+function confetti() {
+  if (reduced || !fxCtx) return;
+  const w = fxCtx.canvas.getBoundingClientRect().width;
+  for (let j = 0; j < 160; j++) parts.push({ x: Math.random() * w, y: -10 - Math.random() * 80, vx: (Math.random() - .5) * 2, vy: 1 + Math.random() * 3, life: 1.6, r: 1.5 + Math.random() * 2.5, col: rand([[71, 224, 200], [255, 127, 150], [255, 231, 168]]) });
+  if (!fxRunning) { fxRunning = true; requestAnimationFrame(fxLoop); }
+}
+
+/* ---------- overlays ---------- */
+function showEnd() {
+  const g = S.g; if (!g || g.status !== "done") return;
+  const tie = g.s1 === g.s2, w = g.s1 > g.s2 ? 1 : 2;
+  let title = tie ? "A perfect draw" : `${S.names[w]} wins!`;
+  if (!tie && S.mode === "bot") title = w === 1 ? "You beat the bot!" : "The bot takes it";
+  if (!tie && S.mode === "online") title = w === S.me ? "You win!" : `${S.names[w]} wins`;
+  if (!tie && (S.mode !== "bot" || w === 1) && (S.mode !== "online" || w === S.me)) { sound.win(); confetti(); }
+  const layer = $("#layer"); layer.textContent = "";
+  const again = el("button", { class: "cta", id: "again-btn", onclick: () => S.mode === "online" ? rematchOnline() : restartLocal(true) }, "Play again");
+  const card = el("div", { class: "card", role: "dialog", "aria-label": "Game over" },
+    el("div", { class: "label" }, "Every line is drawn"),
+    el("h2", {}, title),
+    el("div", { class: "final" }, el("span", { class: "s1" }, g.s1), el("small", {}, "to"), el("span", { class: "s2" }, g.s2)),
+    el("p", {}, `${S.names[1]} · ${S.names[2]} on a ${g.n}×${g.n} grid`),
+    el("div", { class: "btns" }, again, el("button", { class: "ghost", onclick: () => { layer.textContent = ""; } }, "View board"), el("button", { class: "ghost", onclick: () => { layer.textContent = ""; goHome(); } }, "Change setup")));
+  layer.append(el("div", { class: "overlay" }, card));
+  again.focus();
+}
+function showWaiting() {
+  const layer = $("#layer"); if (layer.querySelector("#wait-card")) return;
+  layer.textContent = "";
+  const code = S.online.code, link = inviteUrl(code);
+  const copy = el("button", { class: "cta", style: "font-size:16px;padding:12px 18px", onclick: async () => {
+    try { await navigator.clipboard.writeText(`Play Dots and Boxes with me! ${link}`); toast("Invite link copied"); } catch { toast(`Send your friend this link: ${link}`); }
+  } }, "Copy invite link");
+  layer.append(el("div", { class: "overlay" }, el("div", { class: "card", id: "wait-card" },
+    el("div", { class: "label" }, "Your table code"), el("div", { class: "bigcode" }, code),
+    el("p", {}, "Send your friend the invite link, or have them open this site, choose Online with a friend and enter the code. Keep this screen open: the game starts the moment they join."),
+    el("div", { class: "spinner", "aria-hidden": "true" }),
+    el("div", { class: "btns" }, copy, el("button", { class: "ghost", onclick: () => { layer.textContent = ""; leaveOnline(false); S.g = null; S.screen = "online"; render(); } }, "Cancel table")))));
+}
+function showLeft() {
+  const layer = $("#layer"); layer.textContent = "";
+  layer.append(el("div", { class: "overlay" }, el("div", { class: "card" }, el("h2", {}, `${S.names[S.me === 1 ? 2 : 1]} left`), el("p", {}, "This game can't continue. Start a new table from the lobby."),
+    el("div", { class: "btns" }, el("button", { class: "cta", onclick: () => { layer.textContent = ""; leaveOnline(false); S.g = null; S.screen = "online"; render(); } }, "Back to lobby")))));
+}
+function showGone() {
+  const layer = $("#layer"); if (layer.querySelector("#gone-card")) return;
+  layer.textContent = "";
+  layer.append(el("div", { class: "overlay" }, el("div", { class: "card", id: "gone-card" }, el("h2", {}, "Connection lost"), el("p", {}, `${S.names[S.me === 1 ? 2 : 1]} dropped out. Waiting for them to reconnect…`), el("div", { class: "spinner", "aria-hidden": "true" }),
+    el("div", { class: "btns" }, el("button", { class: "ghost", onclick: () => { layer.textContent = ""; leaveOnline(true); S.g = null; S.screen = "online"; render(); } }, "Back to lobby")))));
+}
+function confirmLeave() {
+  const g = S.g;
+  if (!g || g.status !== "playing" || g.moves === 0) { goHome(); return; }
+  const layer = $("#layer"); layer.textContent = "";
+  layer.append(el("div", { class: "overlay" }, el("div", { class: "card" }, el("h2", {}, "Leave this game?"), el("p", {}, S.mode === "online" ? "Your friend will see that you left, and the game ends." : "Your progress on this board will be lost."),
+    el("div", { class: "btns" }, el("button", { class: "cta", onclick: () => { layer.textContent = ""; goHome(); } }, "Leave"), el("button", { class: "ghost", onclick: () => { layer.textContent = ""; } }, "Keep playing")))));
+}
+function goHome() { leaveOnline(true); S.g = null; S.screen = "home"; boardEls = null; render(); }
+function restartLocal(swapFirst) {
+  $("#layer").textContent = "";
+  const first = swapFirst ? 3 - S.g.first : S.g.first;
+  S.g = newGame(S.g.n, first); S.streak = 0; S.botBusy = false;
+  renderGameScreen(); maybeBot();
+}
+function rematchOnline() {
+  const g = S.g, o = S.online; if (!o) return;
+  $("#layer").textContent = "";
+  const ng = { ...newGame(g.n, 3 - g.first), round: (g.round || 1) + 1 };
+  S.g = ng; S.streak = 0; renderGameScreen(); writeOnline(ng);
+}
+
+/* ============ Boot ============ */
+const hashCode = (location.hash || "").replace("#", "").toUpperCase();
+if (/^[A-Z0-9]{4}$/.test(hashCode)) {
+  try { history.replaceState(null, "", location.pathname + location.search); } catch {}
+  S.mode = "online"; S.screen = "online"; renderOnline(hashCode);
+} else render();
+})();
+</script>
+</body>
+</html>
